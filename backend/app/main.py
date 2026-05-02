@@ -1,5 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 import pandas as pd
 import os
 import uuid
@@ -63,6 +64,25 @@ class TrainRequest(BaseModel):
 
 def normalize(col):
     return col.lower().replace("_", "").replace("-", "")
+
+
+def get_feature_importance(model, feature_names):
+    try:
+        if hasattr(model, "feature_importances_"):
+            importances = model.feature_importances_
+
+        elif hasattr(model, "coef_"):
+            importances = np.abs(model.coef_)
+            if importances.ndim > 1:
+                importances = importances.mean(axis=0)
+
+        else:
+            return None
+
+        return dict(zip(feature_names, importances.tolist()))
+
+    except Exception:
+        return None
 
 
 # ---------------- UPLOAD ----------------
@@ -161,8 +181,12 @@ async def train_model(request: TrainRequest):
 
 
     X_train = preprocessor.fit_transform(X_train_raw)
+  
     X_test = preprocessor.transform(X_test_raw)
 
+    feature_names = preprocessor.get_feature_names_out().tolist()
+
+    
 
     if task == "classification" and SMOTE_AVAILABLE:
         smote = SMOTE(random_state=42)
@@ -262,5 +286,24 @@ async def train_model(request: TrainRequest):
         "best_model": best_model_name,
         "metrics": best_metrics,
         "model_path": model_path,
-        "dropped_id_columns": id_like_cols
+        "dropped_id_columns": id_like_cols,
+        "feature_importance": get_feature_importance(best_model, feature_names)
     }
+
+
+@app.get("/download-model/{session_id}")
+async def download_model(session_id: str):
+
+    if session_id not in sessions:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    model_path = sessions[session_id].get("model_path")
+
+    if not model_path or not os.path.exists(model_path):
+        raise HTTPException(status_code=404, detail="Model not found")
+
+    return FileResponse(
+        path=model_path,
+        filename=f"automl_model_{session_id}.pkl",
+        media_type="application/octet-stream"
+    )
