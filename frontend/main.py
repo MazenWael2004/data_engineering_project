@@ -7,12 +7,12 @@ import pandas as pd
 
 st.set_page_config(page_title="AutoML App", layout="wide")
 
-st.title("🚀 Automated Machine Learning App")
+st.title("Automated Machine Learning App")
 
 API_URL = "http://127.0.0.1:8000"
 
 # ---------------- SIDEBAR ----------------
-st.sidebar.header("⚙️ Settings")
+st.sidebar.header("Settings")
 
 task = st.sidebar.selectbox(
     "Select Task",
@@ -23,9 +23,9 @@ target_column = st.sidebar.text_input(
     "Target Column (leave empty for clustering)"
 )
 
-# ---------------- FILE UPLOAD ----------------
+
 uploaded_file = st.file_uploader(
-    "📂 Upload your dataset",
+    "Upload your dataset",
     type=["csv", "xlsx"]
 )
 
@@ -46,7 +46,7 @@ if uploaded_file is not None:
                 session_id = response.json()["session_id"]
                 st.session_state["session_id"] = session_id
 
-                st.success("✅ File uploaded successfully!")
+                st.success("File uploaded successfully!")
 
                 # Preview data
                 uploaded_file.seek(0)
@@ -56,7 +56,7 @@ if uploaded_file is not None:
                 else:
                     df = pd.read_excel(uploaded_file)
 
-                st.subheader("📊 Data Preview")
+                st.subheader("Data Preview")
                 st.dataframe(df.head(10), use_container_width=True)
 
             else:
@@ -66,9 +66,9 @@ if uploaded_file is not None:
 if "session_id" in st.session_state:
 
     if task in ["classification", "regression"] and not target_column:
-        st.warning("⚠️ Please enter a target column")
+        st.warning("Please enter a target column")
 
-    if st.button("🚀 Train Model"):
+    if st.button("Train Model"):
 
         payload = {
             "session_id": st.session_state["session_id"],
@@ -84,16 +84,16 @@ if "session_id" in st.session_state:
 
             data = response.json()
 
-            st.success("🎉 Model trained successfully!")
+            st.success("Model trained successfully!")
 
             # ---------------- BEST MODEL ----------------
-            st.subheader("🏆 Best Model")
+            st.subheader("Best Model")
             st.info(data["best_model"])
 
             metrics = data["metrics"]
 
             # ---------------- METRICS ----------------
-            st.subheader("📈 Metrics")
+            st.subheader("Metrics")
 
             if task == "classification":
                 col1, col2, col3, col4 = st.columns(4)
@@ -151,13 +151,13 @@ if "session_id" in st.session_state:
 
             else:
                 if task != "clustering":
-                    st.info("ℹ️ Feature importance not available for this model.")
+                    st.info("Feature importance not available for this model.")
 
         else:
             st.error(response.text)
 
-st.subheader("📦 Download Model")
+st.subheader("Download Model")
 
 download_url = f"{API_URL}/download-model/{st.session_state['session_id']}"
 
-st.markdown(f"[⬇️ Download Trained Model]({download_url})")
+st.markdown(f"[Download Trained Model]({download_url})")
